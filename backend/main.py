@@ -2,9 +2,15 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
-from gemini_service import vision_model
+from vision_service import describe_image
+from pdf_service import (
+    extract_pdf_text,
+    chunk_text
+)
+
 from embedding_service import get_embedding
 from pinecone_db import store_vector, search_vector
+from groq_service import ask_groq
 
 import uuid
 
@@ -21,10 +27,15 @@ app.add_middleware(
 
 @app.get("/")
 def home():
+
     return {
         "message": "Multimodal RAG Backend Running"
     }
 
+
+# ==========================
+# IMAGE UPLOAD
+# ==========================
 
 @app.post("/analyze")
 async def analyze_image(
@@ -32,114 +43,173 @@ async def analyze_image(
     question: str = Form(...)
 ):
     try:
+
         image = Image.open(file.file)
 
-        # Generate image description
-        response = vision_model.generate_content(
-            [
-                "Describe this image in detail",
-                image
-            ]
+        description = describe_image(
+            image
         )
 
-        description = response.text
+        embedding = get_embedding(
+            description
+        )
 
-        # Create embedding
-        embedding = get_embedding(description)
-
-        # Store in Pinecone
         store_vector(
             str(uuid.uuid4()),
             embedding,
-            description
+            description,
+            "image"
         )
-        print("Stored Description:")
-        print(description)
 
-        # Answer question about image
-        answer = vision_model.generate_content(
-            [
-                question,
-                image
-            ]
+        answer = (
+            f"Image description: "
+            f"{description}"
         )
 
         return {
             "description": description,
-            "answer": answer.text
+            "answer": answer
         }
 
     except Exception as e:
+
         return {
             "error": str(e)
         }
 
+
+# ==========================
+# PDF UPLOAD
+# ==========================
+
+@app.post("/upload-document")
+async def upload_document(
+    file: UploadFile = File(...)
+):
+    try:
+
+        text = extract_pdf_text(
+            file.file
+        )
+
+        chunks = chunk_text(text)
+
+        count = 0
+
+        for chunk in chunks:
+
+            embedding = get_embedding(
+                chunk
+            )
+
+            store_vector(
+                str(uuid.uuid4()),
+                embedding,
+                chunk,
+                "document"
+            )
+
+            count += 1
+
+        # Generate summary (use model, but fall back to local extract on failure)
+        try:
+            summary = ask_groq(
+                text[:4000],
+                "Give a concise summary of this document."
+            )
+        except Exception as e:
+            print("SUMMARY ERROR:", str(e))
+            # Fallback: use the first 400 characters of extracted text
+            summary = text[:400] if text else "No text could be extracted from the document."
+
+        return {
+            "summary": summary,
+            "chunks_stored": count
+        }
+
+    except Exception as e:
+
+        return {
+            "error": str(e)
+        }
+
+
+# ==========================
+# MEMORY Q&A
+# ==========================
 
 @app.post("/ask")
 async def ask(
     question: str = Form(...)
 ):
     try:
-        # Convert question to embedding
-        question_embedding = get_embedding(question)
 
-        # Search Pinecone
-        results = search_vector(question_embedding)
-        print(results)
-        print("PINECONE RESULTS:")
-        print(results)
+        question_embedding = get_embedding(
+            question
+        )
 
-        context = ""
+        results = search_vector(
+            question_embedding
+        )
 
-        # Pinecone v9 format
-        if hasattr(results, "matches"):
+        context_chunks = []
+
+        if hasattr(
+            results,
+            "matches"
+        ):
 
             for match in results.matches:
 
-                if hasattr(match, "metadata"):
-                    context += (
-                        match.metadata.get("text", "")
-                        + "\n"
+                if (
+                    hasattr(
+                        match,
+                        "metadata"
                     )
+                    and match.metadata
+                ):
 
-        # Fallback for older SDKs
-        elif isinstance(results, dict):
+                    if (
+                        match.metadata.get(
+                            "type"
+                        )
+                        == "document"
+                    ):
 
-            for match in results.get("matches", []):
+                        context_chunks.append(
+                            match.metadata.get(
+                                "text",
+                                ""
+                            )
+                        )
 
-                context += (
-                    match.get("metadata", {})
-                    .get("text", "")
-                    + "\n"
-                )
+        context = "\n".join(
+            context_chunks
+        )
 
-        if context.strip() == "":
+        if not context.strip():
+
             return {
-                "answer": "No relevant images found in memory."
+                "answer":
+                "No relevant information found in uploaded documents."
             }
 
-        prompt = f"""
-You are a helpful AI assistant.
-
-Context:
-{context}
-
-Question:
-{question}
-
-Answer using the context above.
-"""
-
-        response = vision_model.generate_content(
-            prompt
+        answer = ask_groq(
+            context,
+            question
         )
 
         return {
-            "context": context,
-            "answer": response.text
+            "answer": answer
         }
 
     except Exception as e:
+
+        print(
+            "ASK ERROR:",
+            str(e)
+        )
+
         return {
             "error": str(e)
         }

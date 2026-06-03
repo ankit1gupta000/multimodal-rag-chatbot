@@ -12,26 +12,35 @@ index = pc.Index(
     os.getenv("PINECONE_INDEX")
 )
 
-def store_vector(id, embedding, text):
+
+def store_vector(
+    vector_id,
+    embedding,
+    text,
+    doc_type="document"
+):
 
     index.upsert(
         vectors=[
             {
-                "id": id,
+                "id": str(vector_id),
                 "values": embedding,
                 "metadata": {
-                    "text": text
+                    "text": text,
+                    "type": doc_type
                 }
             }
         ]
     )
 
-def search_vector(embedding):
 
-    result = index.query(
+def search_vector(
+    embedding,
+    top_k=5
+):
+
+    return index.query(
         vector=embedding,
-        top_k=3,
+        top_k=top_k,
         include_metadata=True
     )
-
-    return result
