@@ -2,15 +2,9 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 
-from vision_service import describe_image
-from pdf_service import (
-    extract_pdf_text,
-    chunk_text
-)
-
-from embedding_service import get_embedding
-from pinecone_db import store_vector, search_vector
-from groq_service import ask_groq
+from openai_service import get_embedding, describe_image, ask_openai, summarize_text
+from pdf_service import extract_pdf_text, chunk_text
+from vector_store import store_vector, search_vector
 
 import uuid
 
@@ -113,7 +107,7 @@ async def upload_document(
 
         # Generate summary (use model, but fall back to local extract on failure)
         try:
-            summary = ask_groq(
+            summary = ask_openai(
                 text[:4000],
                 "Give a concise summary of this document."
             )
@@ -194,7 +188,7 @@ async def ask(
                 "No relevant information found in uploaded documents."
             }
 
-        answer = ask_groq(
+        answer = ask_openai(
             context,
             question
         )
