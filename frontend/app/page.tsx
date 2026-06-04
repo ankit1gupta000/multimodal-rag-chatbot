@@ -15,8 +15,9 @@ export default function Home() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Change after deployment
-  const BACKEND_URL = "http://127.0.0.1:8000";
+  const BACKEND_URL =
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    "https://multimodal-rag-chatbot-zvma.onrender.com";
 
   const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>
