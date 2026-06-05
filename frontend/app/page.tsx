@@ -17,7 +17,7 @@ export default function Home() {
 
   const BACKEND_URL =
     process.env.NEXT_PUBLIC_BACKEND_URL ||
-    "http://127.0.0.1:8000";
+    "https://multimodal-rag-chatbot-zvma.onrender.com";
 
   const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>
