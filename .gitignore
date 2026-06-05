@@ -5,3 +5,5 @@ frontend/.next/
 __pycache__/
 *.pyc
 *.pdf
+backend/vectors.json
+tmp_check_backend.py
