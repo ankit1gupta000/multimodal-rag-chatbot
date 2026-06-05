@@ -111,9 +111,10 @@ export default function Home() {
           {
             type: "ai",
             text:
-              data.answer ||
-              data.description ||
-              "No response",
+  data.answer ||
+  data.description ||
+  data.error ||
+  "No response",
           },
         ]);
 
@@ -146,8 +147,9 @@ export default function Home() {
         {
           type: "ai",
           text:
-            data.answer ||
-            "No answer found",
+  data.answer ||
+  data.error ||
+  "No answer found",
         },
       ]);
     } catch (error) {

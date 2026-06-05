@@ -2,7 +2,8 @@ fastapi==0.136.3
 uvicorn==0.48.0
 python-multipart==0.0.29
 python-dotenv==1.2.2
-openai==1.43.0
+openai==1.68.2
+httpx==0.28.1
 pillow==12.2.0
 pypdf==6.12.2
 requests==2.34.2
