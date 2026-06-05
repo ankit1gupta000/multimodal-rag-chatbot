@@ -17,7 +17,7 @@ export default function Home() {
 
   const BACKEND_URL =
     process.env.NEXT_PUBLIC_BACKEND_URL ||
-    "https://multimodal-rag-chatbot-zvma.onrender.com";
+    "https://multimodal-rag-chatbot-uml2.onrender.com";
 
   const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>
