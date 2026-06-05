@@ -15,7 +15,7 @@ export default function Home() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const BACKEND_URL ="https://multimodal-rag-chatbot-uml2.onrender.com";
+  const BACKEND_URL ="https://multimodal-rag-chatbot-1-g03c.onrender.com";
 
   const handleFileSelect = (
     e: React.ChangeEvent<HTMLInputElement>
